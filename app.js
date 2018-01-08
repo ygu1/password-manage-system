@@ -2,6 +2,7 @@ import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
+import graphqlHTTP from 'express-graphql';
 import session from 'express-session';
 import logger from 'morgan';
 import sassMiddleware from 'node-sass-middleware';
@@ -67,10 +68,12 @@ const render = (req, res, file, json) => {
 };
 const includes = {
   passport,
-  render
+  render,
+  graphqlHTTP
 };
 require('./routes/server/login')(app, includes);
 require('./routes/server/app')(app, includes);
+require('./routes/api/users')(app, includes);
 
 if (process.env.NODE_ENV !== 'production') {
   const proxy = httpProxy.createProxyServer();

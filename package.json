@@ -7,6 +7,10 @@
     "start": "node ./bin/start",
     "test": "mocha --recursive './test/*Test.js' --compilers js:babel-core/register"
   },
+  "engines": {
+    "node": "7.10.1",
+    "npm": "4.2.0"
+  },
   "dependencies": {
     "babel-core": "^6.25.0",
     "babel-polyfill": "^6.23.0",
@@ -19,7 +23,10 @@
     "debug": "^3.0.0",
     "ejs": "^2.5.7",
     "express": "^4.15.4",
+    "express-graphql": "^0.6.11",
     "express-session": "^1.15.6",
+    "graphql": "^0.12.3",
+    "graphql-date": "^1.0.3",
     "http-proxy": "^1.16.2",
     "mongoose": "^5.0.0-rc2",
     "morgan": "^1.8.2",
