@@ -1,16 +1,41 @@
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
-import Debug from 'debug';
+import cors from 'cors';
 import express from 'express';
+import session from 'express-session';
 import logger from 'morgan';
 import sassMiddleware from 'node-sass-middleware';
 import path from 'path';
+import passport from 'passport';
+import httpProxy from 'http-proxy';
 // import favicon from 'serve-favicon';
 
-import index from './routes/index';
+import settings from './settings';
+import bundle from './bundle';
 
 const app = express();
-const debug = Debug('password-manage-system:app');
+const RedisStore = require('connect-redis')(session);
+
+// if (settings.forceSSL) {
+//   app.use((req, res, next) => {
+//     if (req.headers['x-forwarded-proto'] !== 'https') {
+//       return res.redirect(['https://', req.get('Host'), req.url].join(''));
+//     }
+//     return next();
+//   });
+// }
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
+app.use(session({
+  store: new RedisStore(settings.redisDb),
+  secret: settings.secret,
+  resave: false,
+  saveUninitialized: true
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
 app.set('views', path.join(__dirname, 'views'));
 // view engine setup
 app.set('view engine', 'ejs');
@@ -22,6 +47,8 @@ app.use(bodyParser.urlencoded({
   extended: false
 }));
 
+app.options('*', cors());
+
 app.use(cookieParser());
 app.use(sassMiddleware({
   src: path.join(__dirname, 'public'),
@@ -31,30 +58,31 @@ app.use(sassMiddleware({
 }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', index);
+require('./middleware/login')(passport);
 
-// catch 404 and forward to error handler
-app.use((req, res, next) => {
-  const err = new Error('Not Found');
-  err.status = 404;
-  next(err);
-});
+const render = (req, res, file, json) => {
+  json.siteTtile = 'PMS';
+  json.user = req.user;
+  return res.render(file, json);
+};
+const includes = {
+  passport,
+  render
+};
+require('./routes/server/login')(app, includes);
+require('./routes/server/app')(app, includes);
 
-// error handler
-/* eslint no-unused-vars: 0 */
-app.use((err, req, res, next) => {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
-});
+if (process.env.NODE_ENV !== 'production') {
+  const proxy = httpProxy.createProxyServer();
+  bundle();
 
-// Handle uncaughtException
-process.on('uncaughtException', (err) => {
-  debug('Caught exception: %j', err);
-  process.exit(1);
-});
+  app.all('/dist/*', (req, res) => {
+    proxy.web(req, res, {
+      target: 'http://localhost:3001/'
+    });
+  });
+}
+
+// app.use('/', index);
 
 export default app;
