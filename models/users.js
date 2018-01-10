@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 import {
   GraphQLObjectType,
-  GraphQLSchema,
   GraphQLList,
   GraphQLString,
   GraphQLID,
@@ -11,6 +10,7 @@ import {
 import GraphQLDate from 'graphql-date';
 import _ from 'underscore';
 import loggers from '../middleware/loggers';
+import logs from './logs';
 
 const userSchema = new mongoose.Schema({
   userId: {
@@ -57,6 +57,25 @@ const UserType = new GraphQLObjectType({
     },
     lastLogin: {
       type: GraphQLDate
+    },
+    logs: {
+      type: new GraphQLList(logs.LogType),
+      args: {
+        userId: {
+          name: 'userId',
+          type: GraphQLString
+        }
+      },
+      async resolve(root, params) {
+        try {
+          if (!_.isEmpty(params.userId)) {
+            return await logs.Log.find({ userId: params.userId });
+          }
+          return [];
+        } catch (e) {
+          throw e;
+        }
+      }
     }
   })
 });
@@ -82,108 +101,95 @@ const UserInputType = new GraphQLInputObjectType({
   })
 });
 
-const Query = new GraphQLObjectType({
-  name: 'Query',
-  fields: () => ({
-    users: {
-      type: new GraphQLList(UserType),
-      args: {
-        userId: {
-          name: 'userId',
-          type: GraphQLString
-        },
-        email: {
-          name: 'email',
-          type: GraphQLString
-        }
-      },
-      async resolve(root, params) {
-        try {
-          if (!_.isEmpty(params.userId)) {
-            const user = await User.find({ userId: params.userId });
-            return user;
-          }
-          if (!_.isEmpty(params.email)) {
-            const user = await User.find({ email: params.email });
-            return user;
-          }
-          const users = await User.find({});
-          return users;
-        } catch (e) {
-          throw e;
-        }
-      }
-    }
-  })
-});
-
-const Mutations = new GraphQLObjectType({
-  name: 'Mutations',
-  fields: () => ({
-    createUser: {
-      type: UserType,
-      args: {
-        input: {
-          type: new GraphQLNonNull(UserInputType),
-        },
-      },
-      async resolve(root, params) {
-        try {
-          const newUser = {
-            userId: params.input.userId,
-            familyName: params.input.familyName,
-            givenName: params.input.givenName,
-            email: params.input.email,
-            lastLogin: new Date()
-          };
-          const user = await new User(newUser).save();
-          loggers.get('models').verbose(`Successfully created user: ${params.input.userId}`);
-          return user;
-        } catch (e) {
-          throw e;
-        }
-      }
+module.exports.usersQuerySchema = {
+  type: new GraphQLList(UserType),
+  args: {
+    userId: {
+      name: 'userId',
+      type: GraphQLString
     },
-    updateUser: {
-      type: UserType,
-      args: {
-        input: {
-          type: new GraphQLNonNull(UserInputType),
-        },
-      },
-      async resolve(root, params) {
-        try {
-          const user = await User.findOneAndUpdate(
-            { userId: params.input.userId }, { $set: params.input }, { new: true }
-          );
-          loggers.get('models').verbose(`Successfully updated user: ${params.input.userId}`);
-          return user;
-        } catch (e) {
-          throw e;
-        }
-      }
-    },
-    deleteUser: {
-      type: UserType,
-      args: {
-        input: {
-          type: new GraphQLNonNull(UserInputType),
-        },
-      },
-      async resolve(root, params) {
-        try {
-          await User.remove({ userId: params.input.userId });
-          loggers.get('models').verbose(`Successfully deleted user: ${params.input.userId}`);
-          return true;
-        } catch (e) {
-          throw e;
-        }
-      }
+    email: {
+      name: 'email',
+      type: GraphQLString
     }
-  })
-});
+  },
+  async resolve(root, params) {
+    try {
+      if (!_.isEmpty(params.userId)) {
+        const user = await User.find({ userId: params.userId });
+        return user;
+      }
+      if (!_.isEmpty(params.email)) {
+        const user = await User.find({ email: params.email });
+        return user;
+      }
+      const users = await User.find({});
+      return users;
+    } catch (e) {
+      throw e;
+    }
+  }
+};
 
-module.exports.userGraphqlSchema = new GraphQLSchema({
-  query: Query,
-  mutation: Mutations
-});
+module.exports.usersCreateSchema = {
+  type: UserType,
+  args: {
+    input: {
+      type: new GraphQLNonNull(UserInputType),
+    },
+  },
+  async resolve(root, params) {
+    try {
+      const newUser = {
+        userId: params.input.userId,
+        familyName: params.input.familyName,
+        givenName: params.input.givenName,
+        email: params.input.email,
+        lastLogin: new Date()
+      };
+      const user = await new User(newUser).save();
+      loggers.get('models').verbose(`Successfully created user: ${params.input.userId}`);
+      return user;
+    } catch (e) {
+      throw e;
+    }
+  }
+};
+
+module.exports.usersUpdateSchema = {
+  type: UserType,
+  args: {
+    input: {
+      type: new GraphQLNonNull(UserInputType),
+    },
+  },
+  async resolve(root, params) {
+    try {
+      const user = await User.findOneAndUpdate(
+        { userId: params.input.userId }, { $set: params.input }, { new: true }
+      );
+      loggers.get('models').verbose(`Successfully updated user: ${params.input.userId}`);
+      return user;
+    } catch (e) {
+      throw e;
+    }
+  }
+};
+
+module.exports.usersDeleteSchema = {
+  type: UserType,
+  args: {
+    input: {
+      type: new GraphQLNonNull(UserInputType),
+    },
+  },
+  async resolve(root, params) {
+    try {
+      await User.remove({ userId: params.input.userId });
+      loggers.get('models').verbose(`Successfully deleted user: ${params.input.userId}`);
+      return true;
+    } catch (e) {
+      throw e;
+    }
+  }
+};

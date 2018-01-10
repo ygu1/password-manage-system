@@ -1,8 +1,8 @@
-import userModel from '../../models/users';
+import schema from '../../models/schema';
 
 module.exports = (app, includes) => {
   app.use('/graphql', includes.graphqlHTTP({
-    schema: userModel.userGraphqlSchema,
+    schema: schema.graphqlSchema,
     graphiql: 'development',
   }));
 };
