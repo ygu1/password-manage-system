@@ -10,7 +10,7 @@ import {
 import GraphQLDate from 'graphql-date';
 import _ from 'underscore';
 import loggers from '../middleware/loggers';
-import logs from './logs';
+import Logs from './logs';
 
 const userSchema = new mongoose.Schema({
   userId: {
@@ -59,17 +59,18 @@ const UserType = new GraphQLObjectType({
       type: GraphQLDate
     },
     logs: {
-      type: new GraphQLList(logs.LogType),
+      type: new GraphQLList(Logs.LogType),
       args: {
         userId: {
           name: 'userId',
           type: GraphQLString
         }
       },
-      async resolve(root, params) {
+      async resolve(root) {
         try {
-          if (!_.isEmpty(params.userId)) {
-            return await logs.Log.find({ userId: params.userId });
+          if (!_.isEmpty(root.userId)) {
+            loggers.get('model').verbose(`Get logs for user: ${root.userId}`);
+            return await Logs.LogMongo.find({ userId: root.userId });
           }
           return [];
         } catch (e) {
@@ -101,7 +102,7 @@ const UserInputType = new GraphQLInputObjectType({
   })
 });
 
-module.exports.usersQuerySchema = {
+module.exports.userQuerySchema = {
   type: new GraphQLList(UserType),
   args: {
     userId: {
@@ -116,13 +117,16 @@ module.exports.usersQuerySchema = {
   async resolve(root, params) {
     try {
       if (!_.isEmpty(params.userId)) {
+        loggers.get('model').verbose(`Get user: ${params.userId} info`);
         const user = await User.find({ userId: params.userId });
         return user;
       }
       if (!_.isEmpty(params.email)) {
+        loggers.get('model').verbose(`Get user: ${params.email} info`);
         const user = await User.find({ email: params.email });
         return user;
       }
+      loggers.get('model').verbose('Get all users info');
       const users = await User.find({});
       return users;
     } catch (e) {
@@ -131,7 +135,7 @@ module.exports.usersQuerySchema = {
   }
 };
 
-module.exports.usersCreateSchema = {
+module.exports.userCreateSchema = {
   type: UserType,
   args: {
     input: {
@@ -156,7 +160,7 @@ module.exports.usersCreateSchema = {
   }
 };
 
-module.exports.usersUpdateSchema = {
+module.exports.userUpdateSchema = {
   type: UserType,
   args: {
     input: {
@@ -176,7 +180,7 @@ module.exports.usersUpdateSchema = {
   }
 };
 
-module.exports.usersDeleteSchema = {
+module.exports.userDeleteSchema = {
   type: UserType,
   args: {
     input: {
@@ -187,6 +191,8 @@ module.exports.usersDeleteSchema = {
     try {
       await User.remove({ userId: params.input.userId });
       loggers.get('models').verbose(`Successfully deleted user: ${params.input.userId}`);
+      await Logs.LogMongo.remove({ userId: params.input.userId });
+      loggers.get('models').verbose(`Successfully deleted all logs for user: ${params.input.userId}`);
       return true;
     } catch (e) {
       throw e;

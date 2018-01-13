@@ -23,6 +23,7 @@
     "comma-dangle": 0,
     "arrow-body-style": 0,
     "no-param-reassign": 0,
+    "no-underscore-dangle": 0,
     "no-unused-expressions": "warn",
     "no-useless-concat": "warn",
     "block-scoped-var": "error",

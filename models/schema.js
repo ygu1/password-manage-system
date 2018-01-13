@@ -9,17 +9,20 @@ import users from './users';
 const Query = new GraphQLObjectType({
   name: 'Query',
   fields: () => ({
-    logs: logs.logsQuerySchema,
-    users: users.usersQuerySchema
+    logs: logs.logQuerySchema,
+    users: users.userQuerySchema
   })
 });
 
 const Mutations = new GraphQLObjectType({
   name: 'Mutations',
   fields: () => ({
-    createUser: users.usersCreateSchema,
-    updateUser: users.usersUpdateSchema,
-    deleteUser: users.usersDeleteSchema
+    createUser: users.userCreateSchema,
+    updateUser: users.userUpdateSchema,
+    deleteUser: users.userDeleteSchema,
+    createLog: logs.logCreateSchema,
+    updateLog: logs.logUpdateSchema,
+    deleteLog: logs.logDeleteSchema,
   })
 });
 
