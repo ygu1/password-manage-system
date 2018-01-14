@@ -73,7 +73,7 @@ const includes = {
 };
 require('./routes/server/login')(app, includes);
 require('./routes/server/app')(app, includes);
-require('./routes/api/index')(app, includes);
+require('./routes/graphqlApi/api')(app, includes);
 
 if (process.env.NODE_ENV !== 'production') {
   const proxy = httpProxy.createProxyServer();
